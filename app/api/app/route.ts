@@ -1,9 +1,9 @@
 import { ensureSchema } from "@/db";
+import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 
-const ADMIN_PASSWORD = "rachunki123#";
 const ADMIN_COOKIE = "bezenskova-house-admin";
-const ADMIN_TOKEN = "local-admin-session-v1";
+const DEVELOPMENT_ADMIN_PASSWORD = "rachunki123#";
 const BILL_ICONS = new Set([
   "↯",
   "≈",
@@ -75,8 +75,25 @@ function readIcon(value: unknown) {
   return BILL_ICONS.has(icon) ? icon : null;
 }
 
+function adminPassword() {
+  const configured = env.ADMIN_PASSWORD;
+  return typeof configured === "string" && configured.length > 0
+    ? configured
+    : DEVELOPMENT_ADMIN_PASSWORD;
+}
+
+async function adminToken() {
+  const bytes = new TextEncoder().encode(
+    `bezenskova-house-admin:${adminPassword()}`,
+  );
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
 async function isAdmin() {
-  return (await cookies()).get(ADMIN_COOKIE)?.value === ADMIN_TOKEN;
+  return (await cookies()).get(ADMIN_COOKIE)?.value === (await adminToken());
 }
 
 function rows<T = D1Row>(result: D1Result<T>) {
@@ -300,11 +317,11 @@ export async function POST(request: Request) {
     const action = String(payload.action ?? "");
 
     if (action === "login") {
-      if (payload.password !== ADMIN_PASSWORD) {
+      if (payload.password !== adminPassword()) {
         return jsonError("That password is not correct.", 401);
       }
       const cookieStore = await cookies();
-      cookieStore.set(ADMIN_COOKIE, ADMIN_TOKEN, {
+      cookieStore.set(ADMIN_COOKIE, await adminToken(), {
         httpOnly: true,
         sameSite: "lax",
         path: "/",

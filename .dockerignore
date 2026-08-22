@@ -1,0 +1,10 @@
+.git
+.DS_Store
+.env*
+.next
+.vinext
+.wrangler
+dist
+node_modules
+outputs
+work

@@ -71,6 +71,14 @@ function money(cents: number) {
   return currency.format(cents / 100);
 }
 
+function monthName(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -225,6 +233,7 @@ export default function Home() {
 }
 
 function Feed({ data }: { data: AppData }) {
+  const currentMonth = data.current.month;
   const monthGroups = useMemo(() => {
     type FeedPost =
       | { kind: "invoice"; date: string; item: Invoice }
@@ -232,6 +241,8 @@ function Feed({ data }: { data: AppData }) {
 
     const groups = new Map<string, { monthLabel: string; posts: FeedPost[] }>();
     const addPost = (month: string, monthLabel: string, post: FeedPost) => {
+      if (month > currentMonth) return;
+
       const group = groups.get(month) ?? { monthLabel, posts: [] };
       group.posts.push(post);
       groups.set(month, group);
@@ -263,7 +274,7 @@ function Feed({ data }: { data: AppData }) {
             b.date.localeCompare(a.date),
         ),
       }));
-  }, [data.invoices, data.summaries]);
+  }, [currentMonth, data.invoices, data.summaries]);
   const remaining = Math.max(
     0,
     data.featured.typeCount - data.featured.receivedCount,
@@ -274,11 +285,6 @@ function Feed({ data }: { data: AppData }) {
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">{data.featured.monthLabel}</p>
-          <h1>Bills, divided<br />without the guesswork.</h1>
-          <p className="hero-intro">
-            One calm place to see what came in, what the household spent,
-            and exactly how the total is shared.
-          </p>
           <div className="month-progress" aria-label={`${data.featured.receivedCount} of ${data.featured.typeCount} bills received`}>
             <div className="progress-line">
               <span style={{ width: `${data.featured.typeCount ? (data.featured.receivedCount / data.featured.typeCount) * 100 : 0}%` }} />
@@ -292,7 +298,7 @@ function Feed({ data }: { data: AppData }) {
 
         <aside className="month-card">
           <div className="month-card-top">
-            <span>Last month</span>
+            <span>Last month ({monthName(data.featured.month)})</span>
             <span className={`status-pill ${data.featured.complete ? "complete" : ""}`}>
               {data.featured.complete ? "Complete" : "In progress"}
             </span>
@@ -344,7 +350,9 @@ function Feed({ data }: { data: AppData }) {
                 aria-labelledby={`feed-month-${group.month}`}
               >
                 <div className="feed-month-heading">
-                  <h3 id={`feed-month-${group.month}`}>{group.monthLabel}</h3>
+                  <h3 id={`feed-month-${group.month}`}>
+                    {group.monthLabel}{group.month === currentMonth ? " (current)" : ""}
+                  </h3>
                   <span>{group.posts.length} {group.posts.length === 1 ? "entry" : "entries"}</span>
                 </div>
                 <div className="feed-month-posts">
@@ -407,14 +415,9 @@ function InvoicePost({ invoice }: { invoice: Invoice }) {
 function SummaryPost({ summary }: { summary: Summary }) {
   return (
     <article className="feed-card summary-card">
-      <div className="summary-stamp">SETTLED<br />UP</div>
       <div className="feed-card-body">
-        <p className="post-label">Monthly total · {summary.monthLabel}</p>
         <div className="summary-heading">
-          <div>
-            <h3>Everything is in.</h3>
-            <p>Here is the final share for the month.</p>
-          </div>
+          <h3>Everything is in.</h3>
           <strong className="post-amount">{money(summary.totalCents)}</strong>
         </div>
         <div className="summary-people">

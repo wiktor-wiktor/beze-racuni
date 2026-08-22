@@ -16,8 +16,8 @@ npm run dev
 Open the local address printed in the terminal. Other devices on the same
 network can use the printed network address.
 
-The default admin password is `rachunki123`. Change the `ADMIN_PASSWORD`
-constant in `app/api/app/route.ts` before regular use.
+The local-development admin password defaults to `rachunki123#`. Set
+`ADMIN_PASSWORD` through Wrangler's environment file for a deployed instance.
 
 ## How splitting works
 
@@ -31,6 +31,35 @@ future invoices only. When one invoice exists for every active bill type, the
 month closes automatically and a final summary appears in the public feed.
 
 Data is stored in the project-local Cloudflare D1 development database.
+
+## Deploy to the Jetson Nano
+
+The Nano deployment runs as an ARM64 Docker container and listens on all of
+the Nano's interfaces. Its SQLite state lives on the host in
+`~/.local/share/bezenskova-house/data`, outside the container. The first
+deployment seeds it from the current local D1 database; subsequent
+deployments leave it untouched.
+
+Requirements on the development Mac and Nano are Docker, SSH, `curl`, and
+`sqlite3` on the Mac. Set the Nano SSH target and deploy:
+
+```bash
+BH_JETSON_TARGET=user@c-desktop npm run deploy:jetson
+```
+
+The deploy command runs the local test suite, builds an ARM64 image, transfers
+it, seeds data only when the remote database does not exist, and starts the
+container with a restart policy. It health-checks the new release and restores
+the previous image if startup fails. The service uses port `3007` by default;
+override it with `BH_PORT` if needed.
+
+The production admin password is stored only on the Nano in
+`~/.local/share/bezenskova-house/app.env`. Change it there and restart the
+container to rotate the password:
+
+```bash
+docker restart bezenskova-house
+```
 
 ## Useful commands
 

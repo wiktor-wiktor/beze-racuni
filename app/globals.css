@@ -200,15 +200,6 @@ select:focus-visible {
   margin: 0;
 }
 
-.hero-intro {
-  color: var(--ink-soft);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 20px;
-  line-height: 1.55;
-  margin: 30px 0 40px;
-  max-width: 540px;
-}
-
 .month-progress {
   align-items: center;
   display: grid;
@@ -553,7 +544,7 @@ select:focus-visible {
   background: var(--green);
   border-color: var(--green);
   color: white;
-  grid-template-columns: 78px 1fr;
+  grid-template-columns: 1fr;
   overflow: hidden;
   padding: 30px;
   position: relative;
@@ -570,38 +561,11 @@ select:focus-visible {
   width: 260px;
 }
 
-.summary-stamp {
-  align-items: center;
-  border: 2px solid var(--yellow);
-  border-radius: 50%;
-  color: var(--yellow);
-  display: flex;
-  font-size: 10px;
-  font-weight: 900;
-  height: 72px;
-  justify-content: center;
-  letter-spacing: 0.08em;
-  line-height: 1.1;
-  text-align: center;
-  transform: rotate(-8deg);
-  width: 72px;
-}
-
-.summary-card .post-label {
-  color: var(--yellow);
-}
-
 .summary-heading {
   align-items: start;
   display: flex;
   gap: 24px;
   justify-content: space-between;
-}
-
-.summary-heading p {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  margin: 7px 0 0;
 }
 
 .summary-people {
@@ -1190,11 +1154,6 @@ input::placeholder {
   .feed-icon {
     height: 42px;
     width: 42px;
-  }
-
-  .summary-stamp {
-    height: 60px;
-    width: 60px;
   }
 
   .feed-card-heading,
