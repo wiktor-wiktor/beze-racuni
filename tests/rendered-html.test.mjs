@@ -23,11 +23,9 @@ test("ships the Bezenškova House product instead of starter preview UI", async 
   assert.match(page, /monthB\.localeCompare\(monthA\)/);
   assert.match(page, /className="feed-month"/);
   assert.match(page, /Last month \(\{monthName\(data\.featured\.month\)\}\)/);
-  assert.match(page, /const currentMonth = data\.current\.month/);
-  assert.match(page, /if \(month > currentMonth\) return/);
-  assert.match(page, /group\.month === currentMonth \? " \(current\)"/);
-  assert.doesNotMatch(page, /Bills, divided/);
-  assert.doesNotMatch(page, /One calm place/);
+  assert.match(page, /if \(month > data\.featured\.month\) return/);
+  assert.match(page, /group\.month === data\.featured\.month \? " \(current\)"/);
+  assert.doesNotMatch(page, /Bills, divided|One calm place/);
   assert.doesNotMatch(page, /SETTLED|Monthly total|Here is the final share/);
   assert.match(page, /♻/);
   assert.match(styles, /@media \(max-width: 760px\)/);

@@ -233,7 +233,6 @@ export default function Home() {
 }
 
 function Feed({ data }: { data: AppData }) {
-  const currentMonth = data.current.month;
   const monthGroups = useMemo(() => {
     type FeedPost =
       | { kind: "invoice"; date: string; item: Invoice }
@@ -241,7 +240,7 @@ function Feed({ data }: { data: AppData }) {
 
     const groups = new Map<string, { monthLabel: string; posts: FeedPost[] }>();
     const addPost = (month: string, monthLabel: string, post: FeedPost) => {
-      if (month > currentMonth) return;
+      if (month > data.featured.month) return;
 
       const group = groups.get(month) ?? { monthLabel, posts: [] };
       group.posts.push(post);
@@ -274,7 +273,7 @@ function Feed({ data }: { data: AppData }) {
             b.date.localeCompare(a.date),
         ),
       }));
-  }, [currentMonth, data.invoices, data.summaries]);
+  }, [data.featured.month, data.invoices, data.summaries]);
   const remaining = Math.max(
     0,
     data.featured.typeCount - data.featured.receivedCount,
@@ -351,7 +350,7 @@ function Feed({ data }: { data: AppData }) {
               >
                 <div className="feed-month-heading">
                   <h3 id={`feed-month-${group.month}`}>
-                    {group.monthLabel}{group.month === currentMonth ? " (current)" : ""}
+                    {group.monthLabel}{group.month === data.featured.month ? " (current)" : ""}
                   </h3>
                   <span>{group.posts.length} {group.posts.length === 1 ? "entry" : "entries"}</span>
                 </div>

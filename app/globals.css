@@ -171,12 +171,11 @@ select:focus-visible {
 .hero {
   align-items: center;
   display: grid;
-  gap: 72px;
-  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.8fr);
+  gap: 64px;
+  grid-template-columns: minmax(240px, 0.65fr) minmax(380px, 1fr);
   margin: 0 auto;
-  max-width: 1240px;
-  min-height: 650px;
-  padding: 64px 32px 90px;
+  max-width: 980px;
+  padding: 78px 32px 100px;
 }
 
 .eyebrow,
@@ -189,7 +188,6 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
-.hero h1,
 .admin-title h1,
 .admin-login h1 {
   font-family: Georgia, "Times New Roman", serif;
@@ -203,9 +201,9 @@ select:focus-visible {
 .month-progress {
   align-items: center;
   display: grid;
-  gap: 16px;
-  grid-template-columns: 138px 1fr;
-  max-width: 420px;
+  gap: 14px;
+  grid-template-columns: 1fr;
+  max-width: 260px;
 }
 
 .progress-line {
@@ -1068,11 +1066,7 @@ input::placeholder {
 @media (max-width: 960px) {
   .hero {
     gap: 40px;
-    grid-template-columns: 1fr 360px;
-  }
-
-  .hero h1 {
-    font-size: 58px;
+    grid-template-columns: minmax(210px, 0.6fr) minmax(340px, 1fr);
   }
 
   .admin-grid {
@@ -1107,12 +1101,17 @@ input::placeholder {
   }
 
   .hero {
+    gap: 34px;
     grid-template-columns: 1fr;
-    padding: 55px 20px 70px;
+    padding: 48px 20px 70px;
   }
 
-  .hero h1 {
-    font-size: clamp(50px, 14vw, 68px);
+  .hero-copy {
+    width: 100%;
+  }
+
+  .month-progress {
+    max-width: none;
   }
 
   .month-card {
@@ -1228,10 +1227,6 @@ input::placeholder {
 
   .hero {
     padding-top: 42px;
-  }
-
-  .month-progress {
-    grid-template-columns: 100px 1fr;
   }
 
   .grand-total {
