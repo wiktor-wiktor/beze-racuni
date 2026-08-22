@@ -233,6 +233,7 @@ export default function Home() {
 }
 
 function Feed({ data }: { data: AppData }) {
+  const [expandedRecipientId, setExpandedRecipientId] = useState<number | null>(null);
   const monthGroups = useMemo(() => {
     type FeedPost =
       | { kind: "invoice"; date: string; item: Invoice }
@@ -278,6 +279,9 @@ function Feed({ data }: { data: AppData }) {
     0,
     data.featured.typeCount - data.featured.receivedCount,
   );
+  const featuredInvoices = data.invoices.filter(
+    (invoice) => invoice.month === data.featured.month,
+  );
 
   return (
     <main>
@@ -305,13 +309,60 @@ function Feed({ data }: { data: AppData }) {
           <strong className="grand-total">{money(data.featured.totalCents)}</strong>
           <p className="muted">Total household cost</p>
           <div className="current-people">
-            {data.featured.totals.length ? data.featured.totals.map((person) => (
-              <div className="person-total" key={person.recipientId}>
-                <span className="avatar">{initials(person.recipientName)}</span>
-                <span>{person.recipientName}</span>
-                <strong>{money(person.amountCents)}</strong>
-              </div>
-            )) : (
+            {data.featured.totals.length ? data.featured.totals.map((person) => {
+              const expanded = expandedRecipientId === person.recipientId;
+              const paymentBreakdown = featuredInvoices.flatMap((invoice) => {
+                const share = invoice.shares.find(
+                  (item) => item.recipientId === person.recipientId,
+                );
+                return share
+                  ? [{
+                      invoiceId: invoice.id,
+                      typeName: invoice.typeName,
+                      typeIcon: invoice.typeIcon,
+                      amountCents: share.amountCents,
+                    }]
+                  : [];
+              });
+              const detailsId = `recipient-payment-details-${person.recipientId}`;
+
+              return (
+                <div className="person-total-item" key={person.recipientId}>
+                  <button
+                    className="person-total"
+                    type="button"
+                    aria-expanded={expanded}
+                    aria-controls={detailsId}
+                    onClick={() => setExpandedRecipientId(
+                      expanded ? null : person.recipientId,
+                    )}
+                  >
+                    <span className="avatar">{initials(person.recipientName)}</span>
+                    <span>{person.recipientName}</span>
+                    <span className="person-total-amount">
+                      <strong>{money(person.amountCents)}</strong>
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div
+                      className="person-payment-details"
+                      id={detailsId}
+                      aria-label={`${person.recipientName}'s payment breakdown`}
+                    >
+                      {paymentBreakdown.map((payment) => (
+                        <div className="person-payment-row" key={payment.invoiceId}>
+                          <span className="payment-type-icon" aria-hidden="true">
+                            {payment.typeIcon}
+                          </span>
+                          <span>{payment.typeName}</span>
+                          <strong>{money(payment.amountCents)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }) : (
               <p className="empty-inline">Individual totals will appear with the first bill.</p>
             )}
           </div>

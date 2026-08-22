@@ -19,6 +19,9 @@ test("ships the Bezenškova House product instead of starter preview UI", async 
   assert.match(page, /Recipients & weights/);
   assert.match(layout, /Bezenškova House — Our shared bills/);
   assert.match(page, /aria-expanded=\{open\}/);
+  assert.match(page, /aria-expanded=\{expanded\}/);
+  assert.match(page, /person-payment-details/);
+  assert.match(page, /invoice\.month === data\.featured\.month/);
   assert.match(page, /IconPicker/);
   assert.match(page, /monthB\.localeCompare\(monthA\)/);
   assert.match(page, /className="feed-month"/);

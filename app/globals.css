@@ -303,13 +303,61 @@ select:focus-visible {
   padding-top: 10px;
 }
 
+.person-total-item + .person-total-item {
+  border-top: 1px solid rgba(217, 209, 196, 0.65);
+}
+
 .person-total {
   align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: inherit;
+  cursor: pointer;
   display: grid;
   font-size: 13px;
   gap: 10px;
   grid-template-columns: 34px 1fr auto;
-  padding: 8px 0;
+  margin: 0 -6px;
+  padding: 8px 15px 8px 6px;
+  text-align: left;
+  width: calc(100% + 12px);
+}
+
+.person-total:hover {
+  background: rgba(47, 92, 77, 0.06);
+}
+
+.person-total-amount {
+  align-items: center;
+  display: flex;
+}
+
+.person-payment-details {
+  background: rgba(245, 240, 231, 0.72);
+  border-radius: 10px;
+  margin: 0 0 7px;
+  padding: 5px 10px;
+}
+
+.person-payment-row {
+  align-items: center;
+  display: grid;
+  font-size: 12px;
+  gap: 8px;
+  grid-template-columns: 20px 1fr auto;
+  padding: 6px 0;
+}
+
+.person-payment-row + .person-payment-row {
+  border-top: 1px solid rgba(217, 209, 196, 0.75);
+}
+
+.payment-type-icon {
+  color: var(--orange-dark);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  text-align: center;
 }
 
 .avatar {
