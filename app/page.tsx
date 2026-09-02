@@ -79,6 +79,41 @@ function monthName(month: string) {
   }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
 }
 
+function paymentMessage(recipient: Recipient, month: string, invoices: Invoice[]) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return "Choose a month to create a payment message.";
+  }
+
+  const payments = invoices.flatMap((invoice) => {
+    if (invoice.month !== month) return [];
+    const share = invoice.shares.find((item) => item.recipientId === recipient.id);
+    return share
+      ? [{ typeName: invoice.typeName, amountCents: share.amountCents }]
+      : [];
+  });
+
+  if (!payments.length) {
+    return `Hi ${recipient.name}, no payments are recorded for ${monthLabel(month)}.`;
+  }
+
+  const totalCents = payments.reduce((sum, payment) => sum + payment.amountCents, 0);
+  return [
+    `Hi ${recipient.name},`,
+    `Your payments for ${monthLabel(month)}:`,
+    ...payments.map((payment) => `${payment.typeName}: ${money(payment.amountCents)}`),
+    `Total: ${money(totalCents)}`,
+  ].join("\n");
+}
+
+function monthLabel(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, monthNumber - 1, 1)));
+}
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -553,11 +588,63 @@ function AdminPanel({
   const [typeIcon, setTypeIcon] = useState("◆");
   const [recipientName, setRecipientName] = useState("");
   const [recipientShares, setRecipientShares] = useState<Record<string, number>>({});
+  const [messageRecipientId, setMessageRecipientId] = useState(
+    String(data.admin!.recipients[0]?.id ?? ""),
+  );
+  const [messageMonth, setMessageMonth] = useState(data.featured.month);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [invoiceTypeFilters, setInvoiceTypeFilters] = useState<number[]>([]);
   const selectedInvoiceType = data.types.some(
     (type) => String(type.id) === invoiceType,
   )
     ? invoiceType
     : String(data.types[0]?.id ?? "");
+  const activeInvoiceTypeFilters = invoiceTypeFilters.filter((typeId) =>
+    data.types.some((type) => type.id === typeId),
+  );
+  const filteredInvoices = activeInvoiceTypeFilters.length
+    ? data.invoices.filter((invoice) => activeInvoiceTypeFilters.includes(invoice.typeId))
+    : data.invoices;
+  const invoiceCountsByMonth = data.invoices.reduce((counts, invoice) => {
+    counts.set(invoice.month, (counts.get(invoice.month) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>());
+  const invoiceMonthGroups = Array.from(
+    filteredInvoices.reduce((groups, invoice) => {
+      const group = groups.get(invoice.month) ?? {
+        monthLabel: invoice.monthLabel,
+        invoices: [] as Invoice[],
+      };
+      group.invoices.push(invoice);
+      groups.set(invoice.month, group);
+      return groups;
+    }, new Map<string, { monthLabel: string; invoices: Invoice[] }>()),
+  ).sort(([monthA], [monthB]) => monthB.localeCompare(monthA));
+  const messageRecipient =
+    data.admin!.recipients.find(
+      (recipient) => String(recipient.id) === messageRecipientId,
+    ) ?? data.admin!.recipients[0];
+  const messageMonthIsValid = /^\d{4}-(0[1-9]|1[0-2])$/.test(messageMonth);
+  const generatedMessage = messageRecipient
+    ? paymentMessage(messageRecipient, messageMonth, data.invoices)
+    : "Add a recipient before creating a payment message.";
+
+  async function copyPaymentMessage() {
+    try {
+      await navigator.clipboard.writeText(generatedMessage);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
+  function toggleInvoiceTypeFilter(typeId: number) {
+    setInvoiceTypeFilters((current) =>
+      current.includes(typeId)
+        ? current.filter((currentTypeId) => currentTypeId !== typeId)
+        : [...current, typeId],
+    );
+  }
 
   async function addInvoice(event: FormEvent) {
     event.preventDefault();
@@ -758,34 +845,139 @@ function AdminPanel({
         </div>
       </section>
 
-      <section className="admin-card invoices-admin">
-        <div className="card-title">
-          <span className="step">04</span>
-          <div>
-            <p className="eyebrow">Published feed entries</p>
-            <h2>Manage invoices</h2>
+      <section className="admin-card payment-message-card">
+        <div className="card-title spread">
+          <div className="title-with-step">
+            <span className="step">04</span>
+            <div>
+              <p className="eyebrow">Ready to send</p>
+              <h2>Payment message</h2>
+            </div>
+          </div>
+          <p className="helper">Choose a person and month, then copy the plain text into a message.</p>
+        </div>
+        <div className="payment-message-layout">
+          <div className="payment-message-controls">
+            <label>
+              Recipient
+              <select
+                value={String(messageRecipient?.id ?? "")}
+                onChange={(event) => {
+                  setMessageRecipientId(event.target.value);
+                  setCopyState("idle");
+                }}
+                disabled={!data.admin!.recipients.length}
+              >
+                {data.admin!.recipients.map((recipient) => (
+                  <option value={recipient.id} key={recipient.id}>{recipient.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Month
+              <input
+                type="month"
+                value={messageMonth}
+                onChange={(event) => {
+                  setMessageMonth(event.target.value);
+                  setCopyState("idle");
+                }}
+                required
+              />
+            </label>
+          </div>
+          <div className="payment-message-preview">
+            <label htmlFor="payment-message-text">Message preview</label>
+            <textarea
+              id="payment-message-text"
+              value={generatedMessage}
+              readOnly
+              rows={Math.max(4, generatedMessage.split("\n").length)}
+              aria-live="polite"
+            />
+            <div className="payment-message-actions">
+              <small>
+                {copyState === "failed"
+                  ? "Could not copy automatically. Select the text above to copy it."
+                  : "Plain text · ready for SMS"}
+              </small>
+              <button
+                className="button dark"
+                type="button"
+                disabled={!messageRecipient || !messageMonthIsValid}
+                onClick={copyPaymentMessage}
+              >
+                {copyState === "copied" ? "Copied" : "Copy text"}
+              </button>
+            </div>
           </div>
         </div>
-        {data.invoices.length ? (
-          <div className="invoice-table">
-            {data.invoices.map((invoice) => (
-              <div key={invoice.id}>
-                <span className="type-icon">{invoice.typeIcon}</span>
-                <span>
-                  <strong>{invoice.typeName}</strong>
-                  <small>{invoice.monthLabel}</small>
-                </span>
-                <strong>{money(invoice.amountCents)}</strong>
-                <button
-                  className="text-button danger"
-                  disabled={busy}
-                  onClick={() => mutate({ action: "deleteInvoice", id: invoice.id }, "Invoice removed.")}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+      </section>
+
+      <section className="admin-card invoices-admin">
+        <div className="invoice-admin-header">
+          <div className="card-title">
+            <span className="step">05</span>
+            <div>
+              <p className="eyebrow">Published feed entries</p>
+              <h2>Manage invoices</h2>
+            </div>
           </div>
+          {data.types.length > 0 && (
+            <div className="invoice-type-filters" aria-label="Filter invoices by bill type">
+              {data.types.map((type) => {
+                const selected = activeInvoiceTypeFilters.includes(type.id);
+                return (
+                  <button
+                    className={selected ? "selected" : ""}
+                    type="button"
+                    aria-pressed={selected}
+                    key={type.id}
+                    onClick={() => toggleInvoiceTypeFilter(type.id)}
+                  >
+                    <span aria-hidden="true">{type.icon}</span>
+                    {type.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {data.invoices.length ? (
+          filteredInvoices.length ? (
+            <div className="invoice-month-groups">
+              {invoiceMonthGroups.map(([month, group]) => (
+                <section className="invoice-month-group" key={month}>
+                  <div className="invoice-month-heading">
+                    <h3>
+                      {group.monthLabel}
+                      <span className="invoice-month-progress">
+                        ({invoiceCountsByMonth.get(month) ?? 0}/{data.types.length})
+                      </span>
+                    </h3>
+                  </div>
+                  <div className="invoice-table">
+                    {group.invoices.map((invoice) => (
+                      <div key={invoice.id}>
+                        <span className="type-icon">{invoice.typeIcon}</span>
+                        <strong>{invoice.typeName}</strong>
+                        <strong>{money(invoice.amountCents)}</strong>
+                        <button
+                          className="text-button danger"
+                          disabled={busy}
+                          onClick={() => mutate({ action: "deleteInvoice", id: invoice.id }, "Invoice removed.")}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="admin-empty compact">No invoices match the selected types.</div>
+          )
         ) : (
           <div className="admin-empty">No invoices have been published yet.</div>
         )}

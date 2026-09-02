@@ -1002,8 +1002,94 @@ input::placeholder {
 }
 
 .recipients-card,
+.payment-message-card,
 .invoices-admin {
   margin-bottom: 18px;
+}
+
+.payment-message-layout {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(220px, 0.45fr) minmax(320px, 1fr);
+  margin-top: 26px;
+}
+
+.payment-message-controls {
+  align-content: start;
+  display: grid;
+  gap: 16px;
+}
+
+.payment-message-preview label {
+  margin-bottom: 8px;
+}
+
+.payment-message-preview textarea {
+  background: #fffdf9;
+  border: 1px solid #cbc1b3;
+  border-radius: 12px;
+  color: var(--ink);
+  font: 14px/1.55 Arial, Helvetica, sans-serif;
+  min-height: 142px;
+  padding: 16px;
+  resize: vertical;
+  width: 100%;
+}
+
+.payment-message-actions {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.payment-message-actions small {
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+.invoice-admin-header {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.invoice-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.invoice-type-filters button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 800;
+  gap: 7px;
+  padding: 8px 11px;
+}
+
+.invoice-type-filters button:hover {
+  background: var(--paper);
+}
+
+.invoice-type-filters button.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: white;
+}
+
+.invoice-type-filters button span {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .helper {
@@ -1067,8 +1153,43 @@ input::placeholder {
   padding: 30px;
 }
 
+.admin-empty.compact {
+  padding: 24px;
+}
+
+.invoice-month-groups {
+  display: grid;
+  gap: 28px;
+  margin-top: 28px;
+}
+
+.invoice-month-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 14px;
+}
+
+.invoice-month-heading h3 {
+  align-items: baseline;
+  display: flex;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  font-weight: 500;
+  gap: 8px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.invoice-month-heading .invoice-month-progress {
+  color: var(--ink-soft);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 .invoice-table {
-  margin-top: 22px;
+  margin-top: 8px;
 }
 
 .invoice-table > div {
@@ -1118,6 +1239,10 @@ input::placeholder {
   }
 
   .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-message-layout {
     grid-template-columns: 1fr;
   }
 
@@ -1183,9 +1308,15 @@ input::placeholder {
 
   .section-heading,
   .admin-title,
-  .card-title.spread {
+  .card-title.spread,
+  .invoice-admin-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .invoice-type-filters {
+    justify-content: flex-start;
+    width: 100%;
   }
 
   .type-key {
@@ -1288,6 +1419,11 @@ input::placeholder {
 
   .invoice-form {
     grid-template-columns: 1fr;
+  }
+
+  .payment-message-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .invoice-table > div {
