@@ -12,7 +12,8 @@
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
-    "deploy:jetson": "bash scripts/deploy-jetson.sh"
+    "deploy:jetson": "bash scripts/deploy-jetson.sh",
+    "test:payments": "BH_NODE_RUNTIME=1 npm run build && node --test tests/payments.test.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

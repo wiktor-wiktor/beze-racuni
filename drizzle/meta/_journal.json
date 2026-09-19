@@ -15,6 +15,13 @@
       "when": 1785103829262,
       "tag": "0001_large_matthew_murdock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789836469552,
+      "tag": "0002_zippy_colonel_america",
+      "breakpoints": true
     }
   ]
 }

@@ -99,3 +99,32 @@ export const monthSummaryItems = sqliteTable(
     primaryKey({ columns: [table.summaryId, table.recipientId] }),
   ],
 );
+
+export const payableInvoices = sqliteTable(
+  "payable_invoices",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    importKey: text("import_key").notNull().unique(),
+    profileId: text("profile_id").notNull(),
+    typeId: integer("type_id").references(() => billTypes.id),
+    month: text("month").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    invoiceNumber: text("invoice_number").notNull().default(""),
+    issuedOn: text("issued_on").notNull().default(""),
+    dueOn: text("due_on").notNull().default(""),
+    transactionTitle: text("transaction_title").notNull().default(""),
+    reference: text("reference").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    sourceName: text("source_name").notNull().default(""),
+    iban: text("iban").notNull(),
+    receiverName: text("receiver_name").notNull(),
+    street: text("street").notNull(),
+    postalCode: text("postal_code").notNull(),
+    city: text("city").notNull(),
+    invoiceId: integer("invoice_id").unique().references(() => invoices.id, { onDelete: "set null" }),
+    paidAt: text("paid_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [uniqueIndex("payable_invoice_number_idx")
+    .on(table.profileId, table.invoiceNumber).where(sql`${table.invoiceNumber} <> ''`)],
+);

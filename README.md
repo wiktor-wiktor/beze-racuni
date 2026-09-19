@@ -19,6 +19,13 @@ network can use the printed network address.
 The local-development admin password defaults to `rachunki123#`. Set
 `ADMIN_PASSWORD` through Wrangler's environment file for a deployed instance.
 
+## Invoice inbox
+
+Attach invoice pictures to a Codex task in this project to import private unpaid drafts.
+The admin inbox provides click-to-copy bank transfer details from the supplied payment
+directory. Marking an invoice paid publishes its household split and moves it to paid
+history. See [the invoice import guide](docs/invoice-import.md) for setup and usage.
+
 ## How splitting works
 
 Weights are relative per bill type. If Alex has weight 1 and Sam has weight 2

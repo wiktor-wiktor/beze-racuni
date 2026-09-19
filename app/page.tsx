@@ -9,6 +9,9 @@ import {
   useState,
 } from "react";
 
+import PaymentInbox from "./payment-inbox";
+import type { PaymentAdminData } from "@/lib/payments";
+
 type BillType = { id: number; name: string; icon: string };
 type Split = {
   recipientId: number;
@@ -56,7 +59,7 @@ type AppData = {
   summaries: Summary[];
   current: MonthStatus;
   featured: MonthStatus;
-  admin: null | { recipients: Recipient[] };
+  admin: null | ({ recipients: Recipient[] } & PaymentAdminData);
 };
 
 const BILL_ICONS = ["↯", "≈", "◒", "⌁", "◆", "●", "☀", "♨", "⌂", "✦", "♻", "◉"];
@@ -655,7 +658,7 @@ function AdminPanel({
         typeId: Number(selectedInvoiceType),
         amount: invoiceAmount,
       },
-      "Invoice added to the household feed.",
+      "Paid invoice added to the household feed.",
     );
     if (ok) setInvoiceAmount("");
   }
@@ -701,13 +704,15 @@ function AdminPanel({
         </button>
       </div>
 
+      <PaymentInbox data={data.admin!} types={data.types} busy={busy} mutate={mutate} month={data.current.month} />
+
       <section className="admin-grid">
         <div className="admin-card accent-card">
           <div className="card-title">
             <span className="step">01</span>
             <div>
               <p className="eyebrow">New activity</p>
-              <h2>Add an invoice</h2>
+              <h2>Add a paid invoice</h2>
             </div>
           </div>
           <form className="invoice-form" onSubmit={addInvoice}>
@@ -737,7 +742,7 @@ function AdminPanel({
               </span>
             </label>
             <button className="button dark" disabled={busy || !data.types.length}>
-              {busy ? "Saving…" : "Publish invoice"}
+              {busy ? "Saving…" : "Record paid invoice"}
             </button>
           </form>
           <div className="missing-strip">

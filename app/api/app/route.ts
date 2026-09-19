@@ -1,4 +1,5 @@
 import { ensureSchema } from "@/db";
+import { changePayable, getPayable, paymentState, PaymentError, savePayable } from "@/db/payments";
 import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 
@@ -104,52 +105,22 @@ async function requireAdmin() {
   if (!(await isAdmin())) throw new Error("UNAUTHORIZED");
 }
 
-async function finalizeMonth(db: D1Database, month: string) {
-  const existing = await db
-    .prepare("SELECT id FROM month_summaries WHERE month = ?")
-    .bind(month)
-    .first<{ id: number }>();
-  if (existing) return;
-
-  const typeCount = await db
-    .prepare("SELECT COUNT(*) AS count FROM bill_types WHERE active = 1")
-    .first<{ count: number }>();
-  const invoiceCount = await db
-    .prepare(
-      `SELECT COUNT(*) AS count
-       FROM invoices i
-       JOIN bill_types bt ON bt.id = i.type_id
-       WHERE i.month = ? AND bt.active = 1`,
-    )
-    .bind(month)
-    .first<{ count: number }>();
-
-  if (!typeCount?.count || invoiceCount?.count !== typeCount.count) return;
-
-  const total = await db
-    .prepare("SELECT COALESCE(SUM(amount_cents), 0) AS total FROM invoices WHERE month = ?")
-    .bind(month)
-    .first<{ total: number }>();
-  const inserted = await db
-    .prepare(
-      "INSERT INTO month_summaries (month, total_cents) VALUES (?, ?) RETURNING id",
-    )
-    .bind(month, total?.total ?? 0)
-    .first<{ id: number }>();
-
-  if (!inserted) return;
-  await db
-    .prepare(
-      `INSERT INTO month_summary_items
-        (summary_id, recipient_id, recipient_name, amount_cents)
-       SELECT ?, s.recipient_id, MAX(s.recipient_name), SUM(s.amount_cents)
-       FROM invoice_shares s
-       JOIN invoices i ON i.id = s.invoice_id
-       WHERE i.month = ?
-       GROUP BY recipient_id`,
-    )
-    .bind(inserted.id, month)
-    .run();
+function finalizeMonthStatements(db: D1Database, month: string) {
+  return [
+    db.prepare(`INSERT OR IGNORE INTO month_summaries (month, total_cents)
+      SELECT ?, COALESCE(SUM(amount_cents), 0) FROM invoices WHERE month = ?
+      HAVING (SELECT COUNT(*) FROM bill_types WHERE active = 1) > 0
+        AND (SELECT COUNT(*) FROM invoices i JOIN bill_types bt ON bt.id = i.type_id
+             WHERE i.month = ? AND bt.active = 1)
+          = (SELECT COUNT(*) FROM bill_types WHERE active = 1)`)
+      .bind(month, month, month),
+    db.prepare(`INSERT OR IGNORE INTO month_summary_items
+      (summary_id, recipient_id, recipient_name, amount_cents)
+      SELECT ms.id, s.recipient_id, MAX(s.recipient_name), SUM(s.amount_cents)
+      FROM invoice_shares s JOIN invoices i ON i.id = s.invoice_id
+      JOIN month_summaries ms ON ms.month = i.month
+      WHERE i.month = ? GROUP BY ms.id, s.recipient_id`).bind(month),
+  ];
 }
 
 async function publicState(db: D1Database) {
@@ -285,6 +256,7 @@ async function adminState(db: D1Database) {
     shareResult,
   );
   return {
+    ...(await paymentState(db)),
     recipients: rows<{ id: number; name: string; createdAt: string }>(
       recipientResult,
     ).map((recipient) => ({
@@ -343,7 +315,12 @@ export async function POST(request: Request) {
     await requireAdmin();
     const db = await ensureSchema();
 
-    if (action === "addType") {
+    let result: Record<string, unknown> = {};
+    if (action === "importPayable" || action === "updatePayable") {
+      result = await savePayable(db, payload, action === "updatePayable");
+    } else if (action === "deletePayable") {
+      await changePayable(db, action, payload);
+    } else if (action === "addType") {
       const name = readName(payload.name, "Bill type");
       const icon = readIcon(payload.icon);
       if (!icon) return jsonError("Choose a valid bill type icon.");
@@ -445,10 +422,13 @@ export async function POST(request: Request) {
         db.prepare("UPDATE recipients SET active = 0 WHERE id = ?").bind(id),
         db.prepare("DELETE FROM recipient_type_shares WHERE recipient_id = ?").bind(id),
       ]);
-    } else if (action === "addInvoice") {
-      const typeId = readId(payload.typeId);
-      const month = readMonth(payload.month);
-      const amountCents = readAmount(payload.amount);
+    } else if (action === "addInvoice" || (action === "setPayablePaid" && payload.paid === true)) {
+      const payable = action === "setPayablePaid" ? await getPayable(db, payload.id) : null;
+      if (payable?.paidAt) return Response.json({ ok: true, ...(await publicState(db)), admin: await adminState(db) });
+      if (payable?.invoiceId) return jsonError("This invoice is already published.", 409);
+      const typeId = payable ? payable.typeId : readId(payload.typeId);
+      const month = payable ? payable.month : readMonth(payload.month);
+      const amountCents = payable ? payable.amountCents : readAmount(payload.amount);
       if (!typeId || !month || !amountCents) {
         return jsonError("Choose a month, bill type, and valid positive amount.");
       }
@@ -510,18 +490,21 @@ export async function POST(request: Request) {
           }
         });
 
-      let invoice: { id: number };
       try {
-        const inserted = await db
-          .prepare(
-            `INSERT INTO invoices
-              (month, type_id, type_name, type_icon, amount_cents)
-             VALUES (?, ?, ?, ?, ?) RETURNING id`,
-          )
-          .bind(month, typeId, type.name, type.icon, amountCents)
-          .first<{ id: number }>();
-        if (!inserted) throw new Error("Could not add the invoice.");
-        invoice = inserted;
+        await db.batch([
+          db.prepare(`INSERT INTO invoices
+            (month, type_id, type_name, type_icon, amount_cents)
+            VALUES (?, ?, ?, ?, ?)`).bind(month, typeId, type.name, type.icon, amountCents),
+          ...allocations.map((item) => db.prepare(`INSERT INTO invoice_shares
+            (invoice_id, recipient_id, recipient_name, weight, amount_cents)
+            VALUES ((SELECT id FROM invoices WHERE month = ? AND type_id = ?), ?, ?, ?, ?)`)
+            .bind(month, typeId, item.recipientId, item.recipientName, item.weight, item.amountCents)),
+          ...(payable ? [db.prepare(`UPDATE payable_invoices
+            SET invoice_id = (SELECT id FROM invoices WHERE month = ? AND type_id = ?),
+                paid_at = CURRENT_TIMESTAMP
+            WHERE id = ?`).bind(month, typeId, payable.id)] : []),
+          ...finalizeMonthStatements(db, month),
+        ]);
       } catch (error) {
         if (String(error).includes("UNIQUE")) {
           return jsonError(`${type.name} already has an invoice for ${monthLabel(month)}.`, 409);
@@ -529,26 +512,13 @@ export async function POST(request: Request) {
         throw error;
       }
 
-      await db.batch(
-        allocations.map((item) =>
-          db
-            .prepare(
-              `INSERT INTO invoice_shares
-                (invoice_id, recipient_id, recipient_name, weight, amount_cents)
-               VALUES (?, ?, ?, ?, ?)`,
-            )
-            .bind(
-              invoice.id,
-              item.recipientId,
-              item.recipientName,
-              item.weight,
-              item.amountCents,
-            ),
-        ),
-      );
-      await finalizeMonth(db, month);
-    } else if (action === "deleteInvoice") {
-      const id = readId(payload.id);
+    } else if (action === "deleteInvoice" || (action === "setPayablePaid" && payload.paid === false)) {
+      const payable = action === "setPayablePaid" ? await getPayable(db, payload.id) : null;
+      if (payable && !payable.invoiceId) {
+        await changePayable(db, action, payload);
+        return Response.json({ ok: true, ...(await publicState(db)), admin: await adminState(db) });
+      }
+      const id = payable ? payable.invoiceId : readId(payload.id);
       if (!id) return jsonError("Choose a valid invoice.");
       const invoice = await db
         .prepare("SELECT month FROM invoices WHERE id = ?")
@@ -566,18 +536,20 @@ export async function POST(request: Request) {
               db.prepare("DELETE FROM month_summaries WHERE id = ?").bind(summary.id),
             ]
           : []),
+        db.prepare("UPDATE payable_invoices SET paid_at = NULL WHERE invoice_id = ?").bind(id),
         db.prepare("DELETE FROM invoice_shares WHERE invoice_id = ?").bind(id),
         db.prepare("DELETE FROM invoices WHERE id = ?").bind(id),
+        ...finalizeMonthStatements(db, invoice.month),
       ];
       await db.batch(statements);
-      await finalizeMonth(db, invoice.month);
     } else {
       return jsonError("Unknown action.", 404);
     }
 
     const publicData = await publicState(db);
-    return Response.json({ ok: true, ...publicData, admin: await adminState(db) });
+    return Response.json({ ok: true, ...result, ...publicData, admin: await adminState(db) });
   } catch (error) {
+    if (error instanceof PaymentError) return jsonError(error.message, error.status);
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return jsonError("Your admin session has expired.", 401);
     }

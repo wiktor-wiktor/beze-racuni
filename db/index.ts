@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { paymentSchemaStatements } from "./payment-schema";
 
 const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS bill_types (
@@ -56,6 +57,7 @@ const schemaStatements = [
     PRIMARY KEY (summary_id, recipient_id),
     FOREIGN KEY (summary_id) REFERENCES month_summaries(id)
   )`,
+  ...paymentSchemaStatements,
 ];
 
 let initialized = false;
