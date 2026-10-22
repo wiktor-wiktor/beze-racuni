@@ -87,6 +87,7 @@ function PaymentCard({ payable: p, profiles, types, busy, mutate }: {
   const [editing, setEditing] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"pay" | "undo" | "delete" | null>(null);
   const [copyNotice, setCopyNotice] = useState("");
+  const address = [p.street, [p.postalCode, p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
   const profile = profiles.find((item) => item.id === p.profileId);
   const activeType = types.find((item) => item.id === p.typeId);
   const overdue = !p.paidAt && p.dueOn && p.dueOn < new Date().toLocaleDateString("en-CA");
@@ -119,10 +120,9 @@ function PaymentCard({ payable: p, profiles, types, busy, mutate }: {
         <CopyField label="Account number / IBAN" value={p.iban} copyValue={p.iban.replace(/\s/g, "")} onCopy={copy} />
         <CopyField label="Amount (EUR)" value={(p.amountCents / 100).toFixed(2).replace(".", ",")} onCopy={copy} />
         <CopyField label="Receiver name" value={p.receiverName} onCopy={copy} />
-        <CopyField label="Street address" value={p.street} onCopy={copy} />
-        <CopyField label="Postal code" value={p.postalCode} onCopy={copy} />
-        <CopyField label="City" value={p.city} onCopy={copy} />
-        <CopyField label="Transaction title / namen" value={p.transactionTitle} onCopy={copy} />
+        <CopyField label="Full address" value={address} onCopy={copy} />
+        <CopyField label="Transaction title / namen" value={p.transactionTitle}
+          copyValue={p.transactionTitle.normalize("NFD").replace(/\p{M}/gu, "")} onCopy={copy} />
         <CopyField label="Payment reference / sklic" value={p.reference} onCopy={copy} />
       </div>
       <div className="payment-copy-footer"><button className="text-button" type="button"

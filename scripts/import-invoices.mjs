@@ -5,7 +5,8 @@ const [argument] = process.argv.slice(2);
 if (!argument || argument === "--help") {
   console.log(`Usage: node scripts/import-invoices.mjs --list | invoice-data.json
 Set BH_APP_URL to the running app's URL and BH_ADMIN_PASSWORD to its admin password.
---list shows active services and the payment directory. JSON may contain one draft or an array.
+--list shows active services, the payment directory, inbox and ledger history, and completed months.
+JSON may contain one draft or an array.
 Imports create unpaid drafts only. Reusing an importKey returns the existing entry.`);
   process.exit(0);
 }
@@ -35,6 +36,9 @@ try {
   const state = await api({ action: "login", password });
   if (argument === "--list") {
     console.log(JSON.stringify({ types: state.types, paymentProfiles: state.admin.paymentProfiles,
+      publishedInvoices: state.invoices.map(({ id, month, typeId, typeName }) =>
+        ({ id, month, typeId, typeName })),
+      completedMonths: state.summaries.map(({ month }) => month),
       existingInvoices: state.admin.payables.map(({ id, importKey, profileId, invoiceNumber, month, typeId, paidAt }) =>
         ({ id, importKey, profileId, invoiceNumber, month, typeId, paidAt })) }, null, 2));
   } else {
