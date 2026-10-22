@@ -1,5 +1,6 @@
 import { paymentProfiles } from "./payment-profiles";
 import type { Payable } from "@/lib/payments";
+import { photoState } from "./invoice-photos";
 
 export class PaymentError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -17,7 +18,11 @@ export async function paymentState(db: D1Database) {
   const result = await db.prepare(`${selectPayable}
     ORDER BY p.paid_at IS NOT NULL, CASE WHEN p.paid_at IS NULL THEN NULLIF(p.due_on, '') END IS NULL,
     CASE WHEN p.paid_at IS NULL THEN p.due_on END, p.paid_at DESC, p.id DESC`).all<Payable>();
-  return { paymentProfiles, payables: result.results ?? [] };
+  const photos = await photoState(db);
+  return { paymentProfiles, payables: (result.results ?? []).map((payable) => ({
+    ...payable, photos: photos.filter((photo) => photo.payableId === payable.id)
+      .map(({ id, name, mediaType, byteSize }) => ({ id, name, mediaType, byteSize })),
+  })) };
 }
 
 export async function getPayable(db: D1Database, value: unknown) {

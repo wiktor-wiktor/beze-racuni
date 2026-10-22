@@ -10,6 +10,8 @@ import {
 } from "react";
 
 import PaymentInbox from "./payment-inbox";
+import InvoicePhotos from "./invoice-photos";
+import type { InvoicePhoto } from "@/lib/invoice-photos";
 import type { PaymentAdminData } from "@/lib/payments";
 
 type BillType = { id: number; name: string; icon: string };
@@ -29,6 +31,7 @@ type Invoice = {
   amountCents: number;
   createdAt: string;
   shares: Split[];
+  photos: InvoicePhoto[];
 };
 type Summary = {
   id: number;
@@ -484,6 +487,7 @@ function InvoicePost({ invoice }: { invoice: Invoice }) {
             <span className={`chevron ${open ? "open" : ""}`} aria-hidden="true">⌄</span>
           </span>
         </button>
+        <InvoicePhotos photos={invoice.photos} />
         {open && (
           <div className="split-list" id={`invoice-details-${invoice.id}`}>
             {invoice.shares.map((share) => (

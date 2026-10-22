@@ -23,7 +23,8 @@ The local-development admin password defaults to `rachunki123#`. Set
 
 Attach invoice pictures to a Codex task in this project to import private unpaid drafts.
 The admin inbox provides click-to-copy bank transfer details from the supplied payment
-directory. Marking an invoice paid publishes its household split and moves it to paid
+directory. Source photos are archived with the invoice, with thumbnails and a full-size
+viewer. Marking an invoice paid publishes its household split and photos and moves it to paid
 history. See [the invoice import guide](docs/invoice-import.md) for setup and usage.
 
 ## How splitting works
@@ -45,7 +46,9 @@ The Nano deployment runs as an ARM64 Docker container and listens on all of
 the Nano's interfaces. Its SQLite state lives on the host in
 `~/.local/share/bezenskova-house/data`, outside the container. The first
 deployment seeds it from the current local D1 database; subsequent
-deployments leave it untouched.
+deployments retain it and apply additive schema updates automatically. Invoice photos live
+in this same persistent database, so container replacements and database backups retain
+the originals without an extra storage service or ARM image-processing dependency.
 
 Requirements on the development Mac and Nano are Docker, SSH, `curl`, and
 `sqlite3` on the Mac. Set the Nano SSH target and deploy:

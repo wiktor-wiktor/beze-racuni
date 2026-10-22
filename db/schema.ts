@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import {
   integer,
+  blob,
+  index,
   primaryKey,
   sqliteTable,
   text,
@@ -128,3 +130,19 @@ export const payableInvoices = sqliteTable(
   (table) => [uniqueIndex("payable_invoice_number_idx")
     .on(table.profileId, table.invoiceNumber).where(sql`${table.invoiceNumber} <> ''`)],
 );
+
+// Original photo bytes are chunked so this schema works in both SQLite and D1.
+export const invoicePhotos = sqliteTable("invoice_photos", {
+  id: text("id").primaryKey(),
+  payableId: integer("payable_id").notNull().references(() => payableInvoices.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  mediaType: text("media_type").notNull(),
+  byteSize: integer("byte_size").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [index("invoice_photos_payable_idx").on(table.payableId)]);
+
+export const invoicePhotoChunks = sqliteTable("invoice_photo_chunks", {
+  photoId: text("photo_id").notNull().references(() => invoicePhotos.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  data: blob("data", { mode: "buffer" }).notNull(),
+}, (table) => [primaryKey({ columns: [table.photoId, table.sequence] })]);

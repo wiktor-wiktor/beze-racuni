@@ -1,3 +1,5 @@
+import type { InvoicePhoto } from "./invoice-photos";
+
 export type PaymentProfile = {
   id: string;
   label: string;
@@ -23,6 +25,7 @@ export type Payable = {
   reference: string;
   notes: string;
   sourceName: string;
+  photos: InvoicePhoto[];
   iban: string;
   receiverName: string;
   street: string;

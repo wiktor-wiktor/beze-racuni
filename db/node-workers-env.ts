@@ -2,10 +2,10 @@ import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
 
-type SqlValue = null | number | string | bigint | Uint8Array;
+type SqlValue = null | number | string | bigint | Uint8Array | ArrayBuffer;
 
 class NodeD1PreparedStatement {
-  private values: SqlValue[] = [];
+  private values: Exclude<SqlValue, ArrayBuffer>[] = [];
 
   constructor(
     private readonly database: DatabaseSync,
@@ -14,7 +14,7 @@ class NodeD1PreparedStatement {
 
   bind(...values: SqlValue[]) {
     const bound = new NodeD1PreparedStatement(this.database, this.query);
-    bound.values = values;
+    bound.values = values.map((value) => value instanceof ArrayBuffer ? new Uint8Array(value) : value);
     return bound;
   }
 

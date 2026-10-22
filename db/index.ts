@@ -1,5 +1,6 @@
 import { env } from "cloudflare:workers";
 import { paymentSchemaStatements } from "./payment-schema";
+import { photoSchemaStatements } from "./invoice-photos";
 
 const schemaStatements = [
   `CREATE TABLE IF NOT EXISTS bill_types (
@@ -58,6 +59,7 @@ const schemaStatements = [
     FOREIGN KEY (summary_id) REFERENCES month_summaries(id)
   )`,
   ...paymentSchemaStatements,
+  ...photoSchemaStatements,
 ];
 
 let initialized = false;

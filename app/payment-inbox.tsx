@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { Payable, PaymentAdminData, PaymentProfile } from "@/lib/payments";
+import InvoicePhotos from "./invoice-photos";
 
 type BillType = { id: number; name: string; icon: string };
 type Mutate = (payload: Record<string, unknown>, success?: string) => Promise<boolean>;
@@ -129,6 +130,8 @@ function PaymentCard({ payable: p, profiles, types, busy, mutate }: {
         onClick={() => copy(`${p.receiverName}\n${p.street}\n${p.postalCode} ${p.city}`, "Name and address")}>Copy name & full address</button>
         <span role="status" aria-live="polite">{copyNotice}</span></div>
       <p className="payment-meta">Issued {displayDate(p.issuedOn)}{p.sourceName ? ` · Source: ${p.sourceName}` : ""}</p>
+      <InvoicePhotos photos={p.photos} />
+      {!p.photos?.length && <p className="payment-meta">No photos archived for this invoice.</p>}
       {p.paidAt && p.notes && <p className="payment-meta">{p.notes}</p>}
       {confirmAction ? <div className="payment-confirm">
         <p>{confirmAction === "pay" ? "Have you completed the bank transfer? Confirming marks this invoice paid and publishes the household split." :

@@ -28,7 +28,9 @@ if [[ ! -f "$local_database" ]]; then
 fi
 
 printf 'Testing and building %s for %s...\n' "$image" "$platform"
-npm test
+npm run lint
+npm run test:payments
+node --test tests/rendered-html.test.mjs
 docker build --platform "$platform" --tag "$image" .
 
 printf 'Creating a consistent seed snapshot...\n'

@@ -1,5 +1,6 @@
 import { ensureSchema } from "@/db";
 import { changePayable, getPayable, paymentState, PaymentError, savePayable } from "@/db/payments";
+import { attachPhoto, photoState, servePhoto } from "@/db/invoice-photos";
 import { env } from "cloudflare:workers";
 import { cookies } from "next/headers";
 
@@ -124,6 +125,7 @@ function finalizeMonthStatements(db: D1Database, month: string) {
 }
 
 async function publicState(db: D1Database) {
+  const photos = await photoState(db, previousMonth());
   const [typeResult, invoiceResult, invoiceShareResult, summaryResult, summaryItemResult] =
     await db.batch([
       db.prepare("SELECT id, name, icon FROM bill_types WHERE active = 1 ORDER BY id"),
@@ -179,6 +181,8 @@ async function publicState(db: D1Database) {
     ...invoice,
     monthLabel: monthLabel(invoice.month),
     shares: shares.filter((share) => share.invoiceId === invoice.id),
+    photos: photos.filter((photo) => photo.invoiceId === invoice.id)
+      .map(({ id, name, mediaType, byteSize }) => ({ id, name, mediaType, byteSize })),
   }));
 
   const summaries = rows<{
@@ -234,6 +238,7 @@ async function publicState(db: D1Database) {
   }
 
   return {
+    capabilities: { invoicePhotos: true },
     types,
     invoices,
     summaries,
@@ -270,21 +275,28 @@ async function adminState(db: D1Database) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const db = await ensureSchema();
+    const photoId = new URL(request.url).searchParams.get("photo");
+    if (photoId !== null) return await servePhoto(db, photoId, await isAdmin(), previousMonth());
     const publicData = await publicState(db);
     return Response.json({
       ...publicData,
       admin: (await isAdmin()) ? await adminState(db) : null,
     });
   } catch (error) {
+    if (error instanceof PaymentError) return jsonError(error.message, error.status);
     return jsonError(error instanceof Error ? error.message : "Unable to load bills.", 500);
   }
 }
 
 export async function POST(request: Request) {
   try {
+    if (request.headers.get("content-type")?.startsWith("multipart/form-data")) {
+      await requireAdmin();
+      return Response.json({ ok: true, ...(await attachPhoto(await ensureSchema(), request)) });
+    }
     const payload = (await request.json()) as Record<string, unknown>;
     const action = String(payload.action ?? "");
 

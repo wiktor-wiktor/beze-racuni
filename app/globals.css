@@ -1491,3 +1491,23 @@ input::placeholder {
   .payment-total { text-align: left; margin-bottom: 10px; }
   .transfer-grid, .payment-edit-form { grid-template-columns: 1fr; }
 }
+
+.invoice-photos { margin-top: 14px; }
+.photo-toggle { min-height: 36px; text-align: left; }
+.photo-thumbnails { display: flex; gap: 12px; overflow-x: auto; padding: 10px 2px; }
+.photo-thumbnail { flex: 0 0 104px; padding: 6px; border: 1px solid var(--line, #deded6); border-radius: 10px; background: #fafaf7; cursor: pointer; color: #333; }
+.photo-thumbnail img { display: block; width: 90px; height: 112px; object-fit: contain; background: #eeeee8; border-radius: 5px; }
+.photo-thumbnail span { display: block; padding-top: 5px; font-size: 12px; }
+.photo-thumbnail:focus-visible, .photo-toggle:focus-visible { outline: 3px solid #416858; outline-offset: 3px; }
+.photo-dialog { width: min(1000px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; border: 1px solid #deded6; border-radius: 16px; color: #242b25; background: #fafaf7; }
+.photo-dialog::backdrop { background: rgb(15 22 17 / 75%); }
+.photo-viewer-header, .photo-viewer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; }
+.photo-viewer-header p { margin: 4px 0 0; font-size: 12px; overflow-wrap: anywhere; }
+.photo-viewer-image { display: flex; justify-content: center; align-items: center; background: #e8eae5; min-height: 140px; padding: 12px; }
+.photo-viewer-image img { display: block; max-width: 100%; max-height: calc(100dvh - 230px); object-fit: contain; }
+.photo-viewer-footer .text-button { text-align: center; }
+@media (max-width: 760px) {
+  .photo-dialog { width: calc(100vw - 16px); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .photo-viewer-header, .photo-viewer-footer { padding: 12px; gap: 8px; }
+  .photo-viewer-footer .button { padding: 10px; }
+}
